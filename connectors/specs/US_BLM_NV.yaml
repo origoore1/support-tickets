@@ -1,0 +1,109 @@
+# Lindgren-X v2.0 Connector Specification
+# Bureau of Land Management - Nevada Mining Claims
+
+metadata:
+  name: "US BLM Nevada Mining Claims"
+  version: "1.0.0"
+  author: "Lindgren-X"
+  description: "Extracts mining claim data from BLM Nevada public datasets"
+  last_updated: "2024-01-15"
+
+source:
+  name: "Bureau of Land Management - Nevada"
+  country_code: "USA"
+  region: "Nevada"
+  type: "government"
+  url: "https://www.blm.gov/programs/energy-and-minerals/mining-and-minerals/locatable-minerals/mining-claims"
+  data_format: "Shapefile (ZIP)"
+  update_frequency: "monthly"
+
+extraction:
+  method: "download"
+  download:
+    url: "https://gis.blm.gov/nvarcgis/rest/services/Mining_Claims/MapServer/0/query?where=1%3D1&outFields=*&f=geojson"
+    format: "json"
+    # Alternative shapefile download (if GeoJSON fails)
+    # url: "https://gis.blm.gov/nvarcgis/rest/services/Mining_Claims/downloads/Nevada_Mining_Claims.zip"
+    # format: "zip"
+    # target_file: "Nevada_Claims.shp"
+
+# Field mappings: How to map source fields to harmonized schema
+field_mappings:
+  # Required fields
+  external_id: "properties.CASE_ID"
+  claim_type: "properties.CLAIM_TYPE"
+  claim_status: "properties.STATUS"
+  commodity: "properties.COMMODITY"
+
+  # Geographic fields
+  region: "Nevada"
+  location_name: "properties.CLAIM_NAME"
+  geometry: "geometry"
+  area: "properties.ACRES"
+  area_unit: "acres"
+
+  # Temporal fields
+  filing_date: "properties.LOCATION_DATE"
+  expiry_date: "properties.EXPIRATION_DATE"
+  last_activity_date: "properties.LAST_UPDATE"
+
+  # Ownership fields
+  holder_name: "properties.CLAIMANT_NAME"
+
+  # Economic fields
+  work_required: "properties.ANNUAL_WORK"
+  fees_due: "properties.FEES_DUE"
+
+# Data transformation rules
+transformations:
+  status_mapping:
+    "Active": "active"
+    "Expired": "expired"
+    "Closed": "closed"
+    "Forfeited": "abandoned"
+    "Pending": "pending"
+
+  claim_type_mapping:
+    "Lode": "mineral"
+    "Placer": "placer"
+    "Mill Site": "mill_site"
+    "Tunnel Site": "tunnel_site"
+
+# Data quality rules
+validation:
+  required_fields:
+    - "CASE_ID"
+    - "STATUS"
+    - "CLAIM_NAME"
+
+  skip_if:
+    - condition: "STATUS == 'Cancelled'"
+      reason: "Cancelled claims are not investment opportunities"
+
+# Scoring hints (used by MineScore algorithm)
+scoring_hints:
+  geological:
+    commodity_scores:
+      gold: 35
+      silver: 30
+      copper: 28
+      lithium: 35
+      rare_earth: 35
+      default: 20
+
+  historical:
+    has_production_history: 25
+    exploration_only: 15
+    no_history: 10
+
+  jurisdiction:
+    nevada_score: 15  # Nevada is mining-friendly
+
+notes: |
+  Nevada BLM mining claims data is publicly available and updated monthly.
+  This connector extracts all claims and filters for expired/abandoned claims
+  suitable for acquisition.
+
+  Data Source: BLM Nevada ArcGIS Services
+  License: Public Domain
+  Update Schedule: Monthly (1st of each month)

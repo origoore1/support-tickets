@@ -1,0 +1,29 @@
+{
+  "name": "lindgren-x-v2",
+  "version": "2.0.0",
+  "description": "Mineral license intelligence system - analyzes government mining databases for investment opportunities",
+  "main": "lindgren-x-v2.js",
+  "scripts": {
+    "start": "node lindgren-x-v2.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mining",
+    "mineral",
+    "exploration",
+    "intelligence",
+    "BLM",
+    "claims"
+  ],
+  "author": "Lindgren-X",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.11.3",
+    "playwright": "^1.40.1",
+    "yaml": "^2.3.4",
+    "adm-zip": "^0.5.10",
+    "shapefile": "^0.6.6",
+    "dotenv": "^16.3.1"
+  }
+}
