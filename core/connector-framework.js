@@ -347,7 +347,21 @@ class ConnectorFramework {
         console.log('Parsing JSON file...');
 
         const content = fs.readFileSync(jsonPath, 'utf8');
-        return JSON.parse(content);
+        const parsed = JSON.parse(content);
+
+        // Handle GeoJSON FeatureCollection
+        if (parsed.type === 'FeatureCollection' && parsed.features) {
+            console.log(`✓ Found GeoJSON with ${parsed.features.length} features`);
+            return parsed.features;
+        }
+
+        // Handle plain array
+        if (Array.isArray(parsed)) {
+            return parsed;
+        }
+
+        // Handle single object - wrap in array
+        return [parsed];
     }
 
     /**
