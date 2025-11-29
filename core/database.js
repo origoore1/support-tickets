@@ -186,11 +186,52 @@ class Database {
         try {
             await client.query('BEGIN');
 
-            for (const claim of claimsArray) {
+            for (let i = 0; i < claimsArray.length; i++) {
+                const claim = claimsArray[i];
+                const savepointName = `claim_${i}`;
+
                 try {
-                    await this.insertHarmonizedClaim(sourceId, runId, claim);
+                    // Create savepoint before each insert to allow individual rollbacks
+                    await client.query(`SAVEPOINT ${savepointName}`);
+
+                    // Use client connection (not pool) to ensure operations are within transaction
+                    await client.query(
+                        `INSERT INTO harmonized_claims (
+                            source_id, run_id, external_id, claim_type, claim_status, commodity,
+                            country_code, region, location_name, geometry, area_hectares,
+                            filing_date, expiry_date, last_activity_date,
+                            holder_name, holder_type, work_required, fees_due,
+                            data_quality_score, raw_data
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+                                  ST_GeomFromGeoJSON($10), $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                        ON CONFLICT (source_id, external_id)
+                        DO UPDATE SET
+                            claim_status = EXCLUDED.claim_status,
+                            expiry_date = EXCLUDED.expiry_date,
+                            last_activity_date = EXCLUDED.last_activity_date,
+                            holder_name = EXCLUDED.holder_name,
+                            work_required = EXCLUDED.work_required,
+                            fees_due = EXCLUDED.fees_due,
+                            raw_data = EXCLUDED.raw_data,
+                            ingestion_date = CURRENT_TIMESTAMP`,
+                        [
+                            sourceId, runId, claim.external_id, claim.claim_type,
+                            claim.claim_status, claim.commodity, claim.country_code,
+                            claim.region, claim.location_name,
+                            claim.geometry ? JSON.stringify(claim.geometry) : null,
+                            claim.area_hectares, claim.filing_date, claim.expiry_date,
+                            claim.last_activity_date, claim.holder_name, claim.holder_type,
+                            claim.work_required, claim.fees_due, claim.data_quality_score,
+                            claim.raw_data ? JSON.stringify(claim.raw_data) : null
+                        ]
+                    );
+
+                    // Release savepoint on success
+                    await client.query(`RELEASE SAVEPOINT ${savepointName}`);
                     insertedCount++;
                 } catch (err) {
+                    // Rollback to savepoint on error, allowing transaction to continue
+                    await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
                     errorCount++;
                     console.error(`Error inserting claim ${claim.external_id}:`, err.message);
                 }
