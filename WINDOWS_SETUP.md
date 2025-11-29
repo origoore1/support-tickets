@@ -9,9 +9,19 @@ Database connection failed: password authentication failed for user "postgres"
 
 Follow these steps:
 
-### Method 1: Automated Setup (Recommended)
+### Method 1: Quick Password Fix (Easiest! ⚡)
 
-Run the automated setup script:
+Run the simple password fix script:
+
+```powershell
+.\fix-password.ps1
+```
+
+This will prompt for your password, update your `.env` file, and set up the database automatically.
+
+### Method 2: Full Automated Setup
+
+Run the comprehensive setup script:
 
 ```powershell
 .\setup-postgresql-windows.ps1
@@ -26,7 +36,9 @@ This script will:
 6. Apply the schema
 7. Update your `.env` file with the correct password
 
-### Method 2: Manual Setup
+**Note:** Both automated scripts will find PostgreSQL automatically - you don't need `psql` in your PATH!
+
+### Method 3: Manual Setup
 
 #### 1. Install PostgreSQL
 
