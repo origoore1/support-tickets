@@ -20,39 +20,35 @@ source:
 extraction:
   method: "download"
   download:
-    url: "https://gis.blm.gov/nvarcgis/rest/services/Mining_Claims/MapServer/0/query?where=1%3D1&outFields=*&f=geojson"
+    url: "https://gis.blm.gov/nlsdb/rest/services/HUB/BLM_Natl_MLRS_Mining_Claims_Not_Closed/FeatureServer/0/query?where=1%3D1&outFields=*&f=geojson"
     format: "json"
-    # Alternative shapefile download (if GeoJSON fails)
-    # url: "https://gis.blm.gov/nvarcgis/rest/services/Mining_Claims/downloads/Nevada_Mining_Claims.zip"
-    # format: "zip"
-    # target_file: "Nevada_Claims.shp"
 
 # Field mappings: How to map source fields to harmonized schema
 field_mappings:
   # Required fields
-  external_id: "properties.CASE_ID"
-  claim_type: "properties.CLAIM_TYPE"
-  claim_status: "properties.STATUS"
-  commodity: "properties.COMMODITY"
+  external_id: "properties.CSE_NR"
+  claim_type: "properties.BLM_PROD"
+  claim_status: "properties.CSE_DISP"
+  commodity: "properties.CSE_TYPE_NR"
 
   # Geographic fields
   region: "Nevada"
-  location_name: "properties.CLAIM_NAME"
+  location_name: "properties.CSE_NAME"
   geometry: "geometry"
-  area: "properties.ACRES"
+  area: "properties.RCRD_ACRS"
   area_unit: "acres"
 
   # Temporal fields
-  filing_date: "properties.LOCATION_DATE"
-  expiry_date: "properties.EXPIRATION_DATE"
-  last_activity_date: "properties.LAST_UPDATE"
+  filing_date: "properties.Created"
+  expiry_date: null
+  last_activity_date: "properties.Modified"
 
   # Ownership fields
-  holder_name: "properties.CLAIMANT_NAME"
+  holder_name: null
 
   # Economic fields
-  work_required: "properties.ANNUAL_WORK"
-  fees_due: "properties.FEES_DUE"
+  work_required: null
+  fees_due: null
 
 # Data transformation rules
 transformations:
