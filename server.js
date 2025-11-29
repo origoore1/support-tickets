@@ -1,11 +1,11 @@
 /**
- * ╔═══════════════════════════════════════════════════════════════════╗
- * ║                     LINDGREN-X v2.0                               ║
- * ║           Mineral License Intelligence System                     ║
- * ║                                                                   ║
- * ║  Analyzes government mining databases to find high-value          ║
- * ║  investment opportunities in expired/abandoned claims             ║
- * ╚═══════════════════════════════════════════════════════════════════╝
+ * =======================================================================
+ *                     LINDGREN-X v2.0
+ *           Mineral License Intelligence System
+ *
+ *  Analyzes government mining databases to find high-value
+ *  investment opportunities in expired/abandoned claims
+ * =======================================================================
  */
 
 require('dotenv').config();
