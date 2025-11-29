@@ -8,11 +8,16 @@ This means the project files haven't been downloaded to your Windows machine yet
 
 ## Solution: Download All Project Files
 
-### Step 1: Download the PowerShell Script
+### Step 1: Create Project Folder and Download Setup Script
 
-1. **Open PowerShell** in the directory where you want to install Lindgren-X
-   - Right-click in the folder and select "Open PowerShell window here"
-   - Or press `Win + X` and select "Windows PowerShell"
+1. **Create a project folder** (IMPORTANT - Remember this location!)
+   ```powershell
+   # Create the project folder
+   mkdir C:\Users\$env:USERNAME\lindgren-x-v2
+
+   # Navigate INTO the project folder
+   cd C:\Users\$env:USERNAME\lindgren-x-v2
+   ```
 
 2. **Download the setup script:**
    ```powershell
@@ -21,7 +26,14 @@ This means the project files haven't been downloaded to your Windows machine yet
 
 ### Step 2: Run the Script
 
+⚠️ **IMPORTANT**: Make sure you're still in the `lindgren-x-v2` folder!
+
 ```powershell
+# Verify you're in the correct folder
+pwd
+# Should show: C:\Users\YourName\lindgren-x-v2
+
+# Run the download script
 .\download-all-files.ps1
 ```
 
@@ -71,6 +83,14 @@ After the download completes:
 
 5. **Start the application:**
    ```powershell
+   # CRITICAL: Make sure you're in the project folder first!
+   cd C:\Users\$env:USERNAME\lindgren-x-v2
+
+   # Verify you're in the correct location
+   dir lindgren-x-v2.js
+   # You should see the file listed
+
+   # Now start the application
    npm start
    ```
 
@@ -79,6 +99,33 @@ After the download completes:
    - You should see the Lindgren-X dashboard!
 
 ## Troubleshooting
+
+### "Connector spec not found" Error
+
+If you see an error like: `Connector spec not found: C:\Users\iritg\connectors\specs\US_BLM_NV.yaml`
+
+**This means you're running the application from the wrong directory!**
+
+**Solution:**
+1. Close the application (Ctrl+C)
+2. Navigate to the project folder:
+   ```powershell
+   cd C:\Users\$env:USERNAME\lindgren-x-v2
+   ```
+3. Verify you're in the right place:
+   ```powershell
+   dir lindgren-x-v2.js
+   # You should see the file
+   ```
+4. Start the application again:
+   ```powershell
+   npm start
+   ```
+
+**Why this happens:**
+- The application needs to run from the project folder (where `lindgren-x-v2.js` is located)
+- If you run it from your home directory (`C:\Users\YourName`), it can't find the connector files
+- Always make sure PowerShell's current directory is the project folder before running `npm start`
 
 ### Script won't run - "Execution Policy Error"
 

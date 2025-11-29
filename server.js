@@ -11,9 +11,64 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const Database = require('./core/database');
 const Harmonizer = require('./core/harmonizer');
 const ConnectorFramework = require('./core/connector-framework');
+
+/**
+ * Verify project structure before startup
+ * This prevents confusing errors if running from wrong directory
+ */
+function verifyProjectStructure() {
+    const requiredDirs = ['core', 'connectors/specs'];
+    const requiredFiles = ['package.json', 'schema-clean.sql'];
+
+    let errors = [];
+
+    // Check for required directories
+    for (const dir of requiredDirs) {
+        if (!fs.existsSync(path.join(process.cwd(), dir))) {
+            errors.push(`Missing directory: ${dir}`);
+        }
+    }
+
+    // Check for required files
+    for (const file of requiredFiles) {
+        if (!fs.existsSync(path.join(process.cwd(), file))) {
+            errors.push(`Missing file: ${file}`);
+        }
+    }
+
+    if (errors.length > 0) {
+        console.error('\n' + '='.repeat(70));
+        console.error('❌ PROJECT STRUCTURE ERROR');
+        console.error('='.repeat(70));
+        console.error('\nThe application cannot start because required files/folders are missing:');
+        errors.forEach(err => console.error(`  ✗ ${err}`));
+        console.error('\nCurrent directory:', process.cwd());
+
+        if (process.platform === 'win32') {
+            console.error('\n⚠️  WINDOWS USERS: Are you running this from the wrong folder?');
+            console.error('\nMake sure you:');
+            console.error('  1. Open PowerShell');
+            console.error('  2. Navigate to the project folder:');
+            console.error('     cd C:\\Users\\YourName\\lindgren-x-v2');
+            console.error('  3. Run: npm start');
+        } else {
+            console.error('\nMake sure you are running this command from the project root directory');
+            console.error('where package.json and the core/ folder are located.');
+        }
+
+        console.error('\n' + '='.repeat(70) + '\n');
+        process.exit(1);
+    }
+
+    console.log('✓ Project structure verified');
+}
+
+// Verify project structure before proceeding
+verifyProjectStructure();
 
 // Configuration
 const config = {

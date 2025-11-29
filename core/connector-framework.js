@@ -27,7 +27,28 @@ class ConnectorFramework {
             const fullPath = path.isAbsolute(specPath) ? specPath : path.join(process.cwd(), specPath);
 
             if (!fs.existsSync(fullPath)) {
-                throw new Error(`Connector spec not found: ${fullPath}`);
+                // Provide helpful error message, especially for Windows users
+                let errorMsg = `Connector spec not found: ${fullPath}`;
+
+                // Check if running on Windows and provide additional guidance
+                if (process.platform === 'win32') {
+                    const cwd = process.cwd();
+                    const hasLindgrenFolder = fs.existsSync(path.join(cwd, 'lindgren-x-v2.js'));
+
+                    if (!hasLindgrenFolder) {
+                        errorMsg += `\n\n⚠️  WINDOWS USERS: You are running the application from the wrong directory!\n`;
+                        errorMsg += `   Current directory: ${cwd}\n`;
+                        errorMsg += `   \n`;
+                        errorMsg += `   Please navigate to your project folder before starting:\n`;
+                        errorMsg += `   1. Open PowerShell\n`;
+                        errorMsg += `   2. Navigate to where you downloaded the files (should contain lindgren-x-v2.js)\n`;
+                        errorMsg += `   3. Run: npm start\n`;
+                        errorMsg += `   \n`;
+                        errorMsg += `   Example: cd C:\\Users\\YourName\\lindgren-x-v2\n`;
+                    }
+                }
+
+                throw new Error(errorMsg);
             }
 
             const yamlContent = fs.readFileSync(fullPath, 'utf8');
