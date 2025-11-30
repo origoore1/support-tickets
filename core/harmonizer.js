@@ -130,6 +130,15 @@ class Harmonizer {
             }
         }
 
+        // Log unrecognized status for future mapping improvements
+        if (!this.loggedUnknownStatuses) {
+            this.loggedUnknownStatuses = new Set();
+        }
+        if (!this.loggedUnknownStatuses.has(rawStatus)) {
+            console.warn(`⚠ Unrecognized claim status: "${rawStatus}" → mapped to "unknown"`);
+            this.loggedUnknownStatuses.add(rawStatus);
+        }
+
         return 'unknown';
     }
 

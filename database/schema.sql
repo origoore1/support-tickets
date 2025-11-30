@@ -76,7 +76,7 @@ CREATE TABLE harmonized_claims (
 
     -- Indexes
     UNIQUE(source_id, external_id),
-    CONSTRAINT valid_status CHECK (claim_status IN ('active', 'expired', 'abandoned', 'pending', 'closed', 'suspended'))
+    CONSTRAINT valid_status CHECK (claim_status IN ('active', 'expired', 'abandoned', 'pending', 'closed', 'suspended', 'unknown'))
 );
 
 -- Create spatial index for geographic queries
