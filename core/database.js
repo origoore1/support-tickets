@@ -233,7 +233,19 @@ class Database {
                     // Rollback to savepoint on error, allowing transaction to continue
                     await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
                     errorCount++;
-                    console.error(`Error inserting claim ${claim.external_id}:`, err.message);
+
+                    // Log detailed error information
+                    if (err.code === '23514') {
+                        // CHECK constraint violation
+                        console.error(`Error inserting claim ${claim.external_id}: CHECK constraint violation`);
+                        console.error(`  → claim_status: "${claim.claim_status}" (must be: active, expired, abandoned, pending, closed, suspended, unknown)`);
+                    } else if (err.code === '23505') {
+                        // Duplicate key
+                        console.error(`Error inserting claim ${claim.external_id}: Duplicate record (already exists)`);
+                    } else {
+                        console.error(`Error inserting claim ${claim.external_id}:`, err.message);
+                        if (err.code) console.error(`  → Error code: ${err.code}`);
+                    }
                 }
             }
 
