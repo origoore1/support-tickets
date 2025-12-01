@@ -188,10 +188,12 @@ class Database {
             for (let i = 0; i < claimsArray.length; i++) {
                 const claim = claimsArray[i];
                 const savepointName = `claim_${i}`;
+                let savepointCreated = false;
 
                 try {
                     // Create savepoint before each insert to allow individual rollbacks
                     await client.query(`SAVEPOINT ${savepointName}`);
+                    savepointCreated = true;
 
                     // Use client connection (not pool) to ensure operations are within transaction
                     await client.query(
@@ -228,9 +230,19 @@ class Database {
                     await client.query(`RELEASE SAVEPOINT ${savepointName}`);
                     insertedCount++;
                 } catch (err) {
-                    // Rollback to savepoint on error, allowing transaction to continue
-                    await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
                     errorCount++;
+
+                    // Only attempt rollback if savepoint was successfully created
+                    if (savepointCreated) {
+                        try {
+                            // Rollback to savepoint on error, allowing transaction to continue
+                            await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
+                        } catch (rollbackErr) {
+                            // Log rollback failure but continue processing
+                            console.error(`Error rolling back savepoint for claim ${claim.external_id}:`, rollbackErr.message);
+                            // Don't throw - we want to continue processing other claims
+                        }
+                    }
 
                     // Log detailed error information
                     if (err.code === '23514') {
@@ -251,8 +263,13 @@ class Database {
             console.log(`✓ Bulk insert: ${insertedCount} claims inserted, ${errorCount} errors`);
             return { insertedCount, errorCount };
         } catch (err) {
-            await client.query('ROLLBACK');
-            console.error('Bulk insert failed:', err.message);
+            // Only rollback on critical errors (BEGIN, COMMIT failures, etc.)
+            try {
+                await client.query('ROLLBACK');
+            } catch (rollbackErr) {
+                console.error('Error during transaction rollback:', rollbackErr.message);
+            }
+            console.error('Bulk insert transaction failed:', err.message);
             throw err;
         } finally {
             client.release();
