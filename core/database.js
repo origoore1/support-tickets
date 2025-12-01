@@ -140,12 +140,11 @@ class Database {
             const result = await this.pool.query(
                 `INSERT INTO harmonized_claims (
                     source_id, run_id, external_id, claim_type, claim_status, commodity,
-                    country_code, region, location_name, geometry, area_hectares,
+                    country_code, region, location_name, geometry_json, area_hectares,
                     filing_date, expiry_date, last_activity_date,
                     holder_name, holder_type, work_required, fees_due,
                     data_quality_score, raw_data
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
-                          ST_GeomFromGeoJSON($10), $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
                 ON CONFLICT (source_id, external_id)
                 DO UPDATE SET
                     claim_status = EXCLUDED.claim_status,
@@ -198,12 +197,11 @@ class Database {
                     await client.query(
                         `INSERT INTO harmonized_claims (
                             source_id, run_id, external_id, claim_type, claim_status, commodity,
-                            country_code, region, location_name, geometry, area_hectares,
+                            country_code, region, location_name, geometry_json, area_hectares,
                             filing_date, expiry_date, last_activity_date,
                             holder_name, holder_type, work_required, fees_due,
                             data_quality_score, raw_data
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
-                                  ST_GeomFromGeoJSON($10), $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
                         ON CONFLICT (source_id, external_id)
                         DO UPDATE SET
                             claim_status = EXCLUDED.claim_status,
