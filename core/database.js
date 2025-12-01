@@ -176,104 +176,75 @@ class Database {
 
     /**
      * Bulk insert harmonized claims (faster for large datasets)
+     * Uses individual queries without a transaction wrapper to prevent cascade failures
      */
     async bulkInsertHarmonizedClaims(sourceId, runId, claimsArray) {
-        const client = await this.pool.connect();
         let insertedCount = 0;
         let errorCount = 0;
 
-        try {
-            await client.query('BEGIN');
+        // Process each claim individually without a wrapping transaction
+        // This prevents one failed insert from aborting subsequent inserts
+        for (let i = 0; i < claimsArray.length; i++) {
+            const claim = claimsArray[i];
 
-            for (let i = 0; i < claimsArray.length; i++) {
-                const claim = claimsArray[i];
-                const savepointName = `claim_${i}`;
-                let savepointCreated = false;
+            try {
+                // Each insert is an independent operation
+                await this.pool.query(
+                    `INSERT INTO harmonized_claims (
+                        source_id, run_id, external_id, claim_type, claim_status, commodity,
+                        country_code, region, location_name, geometry_json, area_hectares,
+                        filing_date, expiry_date, last_activity_date,
+                        holder_name, holder_type, work_required, fees_due,
+                        data_quality_score, raw_data
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                    ON CONFLICT (source_id, external_id)
+                    DO UPDATE SET
+                        claim_status = EXCLUDED.claim_status,
+                        expiry_date = EXCLUDED.expiry_date,
+                        last_activity_date = EXCLUDED.last_activity_date,
+                        holder_name = EXCLUDED.holder_name,
+                        work_required = EXCLUDED.work_required,
+                        fees_due = EXCLUDED.fees_due,
+                        raw_data = EXCLUDED.raw_data,
+                        ingestion_date = CURRENT_TIMESTAMP`,
+                    [
+                        sourceId, runId, claim.external_id, claim.claim_type,
+                        claim.claim_status, claim.commodity, claim.country_code,
+                        claim.region, claim.location_name,
+                        claim.geometry ? JSON.stringify(claim.geometry) : null,
+                        claim.area_hectares, claim.filing_date, claim.expiry_date,
+                        claim.last_activity_date, claim.holder_name, claim.holder_type,
+                        claim.work_required, claim.fees_due, claim.data_quality_score,
+                        claim.raw_data ? JSON.stringify(claim.raw_data) : null
+                    ]
+                );
 
-                try {
-                    // Create savepoint before each insert to allow individual rollbacks
-                    await client.query(`SAVEPOINT ${savepointName}`);
-                    savepointCreated = true;
+                insertedCount++;
 
-                    // Use client connection (not pool) to ensure operations are within transaction
-                    await client.query(
-                        `INSERT INTO harmonized_claims (
-                            source_id, run_id, external_id, claim_type, claim_status, commodity,
-                            country_code, region, location_name, geometry_json, area_hectares,
-                            filing_date, expiry_date, last_activity_date,
-                            holder_name, holder_type, work_required, fees_due,
-                            data_quality_score, raw_data
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-                        ON CONFLICT (source_id, external_id)
-                        DO UPDATE SET
-                            claim_status = EXCLUDED.claim_status,
-                            expiry_date = EXCLUDED.expiry_date,
-                            last_activity_date = EXCLUDED.last_activity_date,
-                            holder_name = EXCLUDED.holder_name,
-                            work_required = EXCLUDED.work_required,
-                            fees_due = EXCLUDED.fees_due,
-                            raw_data = EXCLUDED.raw_data,
-                            ingestion_date = CURRENT_TIMESTAMP`,
-                        [
-                            sourceId, runId, claim.external_id, claim.claim_type,
-                            claim.claim_status, claim.commodity, claim.country_code,
-                            claim.region, claim.location_name,
-                            claim.geometry ? JSON.stringify(claim.geometry) : null,
-                            claim.area_hectares, claim.filing_date, claim.expiry_date,
-                            claim.last_activity_date, claim.holder_name, claim.holder_type,
-                            claim.work_required, claim.fees_due, claim.data_quality_score,
-                            claim.raw_data ? JSON.stringify(claim.raw_data) : null
-                        ]
-                    );
+                // Progress indicator every 100 records
+                if (insertedCount % 100 === 0) {
+                    console.log(`  Processed ${insertedCount + errorCount}/${claimsArray.length} claims...`);
+                }
+            } catch (err) {
+                errorCount++;
 
-                    // Release savepoint on success
-                    await client.query(`RELEASE SAVEPOINT ${savepointName}`);
-                    insertedCount++;
-                } catch (err) {
-                    errorCount++;
-
-                    // Only attempt rollback if savepoint was successfully created
-                    if (savepointCreated) {
-                        try {
-                            // Rollback to savepoint on error, allowing transaction to continue
-                            await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
-                        } catch (rollbackErr) {
-                            // Log rollback failure but continue processing
-                            console.error(`Error rolling back savepoint for claim ${claim.external_id}:`, rollbackErr.message);
-                            // Don't throw - we want to continue processing other claims
-                        }
-                    }
-
-                    // Log detailed error information
-                    if (err.code === '23514') {
-                        // CHECK constraint violation
-                        console.error(`Error inserting claim ${claim.external_id}: CHECK constraint violation`);
-                        console.error(`  → claim_status: "${claim.claim_status}" (must be: active, expired, abandoned, pending, closed, suspended, unknown)`);
-                    } else if (err.code === '23505') {
-                        // Duplicate key
-                        console.error(`Error inserting claim ${claim.external_id}: Duplicate record (already exists)`);
-                    } else {
-                        console.error(`Error inserting claim ${claim.external_id}:`, err.message);
-                        if (err.code) console.error(`  → Error code: ${err.code}`);
-                    }
+                // Log detailed error information
+                if (err.code === '23514') {
+                    // CHECK constraint violation
+                    console.error(`Error inserting claim ${claim.external_id}: CHECK constraint violation`);
+                    console.error(`  → claim_status: "${claim.claim_status}" (must be: active, expired, abandoned, pending, closed, suspended, unknown)`);
+                } else if (err.code === '23505') {
+                    // Duplicate key
+                    console.error(`Error inserting claim ${claim.external_id}: Duplicate record (already exists)`);
+                } else {
+                    console.error(`Error inserting claim ${claim.external_id}:`, err.message);
+                    if (err.code) console.error(`  → Error code: ${err.code}`);
                 }
             }
-
-            await client.query('COMMIT');
-            console.log(`✓ Bulk insert: ${insertedCount} claims inserted, ${errorCount} errors`);
-            return { insertedCount, errorCount };
-        } catch (err) {
-            // Only rollback on critical errors (BEGIN, COMMIT failures, etc.)
-            try {
-                await client.query('ROLLBACK');
-            } catch (rollbackErr) {
-                console.error('Error during transaction rollback:', rollbackErr.message);
-            }
-            console.error('Bulk insert transaction failed:', err.message);
-            throw err;
-        } finally {
-            client.release();
         }
+
+        console.log(`✓ Bulk insert complete: ${insertedCount} claims inserted, ${errorCount} errors`);
+        return { insertedCount, errorCount };
     }
 
     /**
