@@ -12,6 +12,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
 const Database = require('./core/database');
 const Harmonizer = require('./core/harmonizer');
 const ConnectorFramework = require('./core/connector-framework');
@@ -95,6 +96,14 @@ const connectorFramework = new ConnectorFramework(database, harmonizer, config);
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Configure multer for file uploads
+const upload = multer({
+    dest: config.rawDataPath,
+    limits: {
+        fileSize: 50 * 1024 * 1024 // 50MB max file size
+    }
+});
 
 // ============================================================================
 // MINESCORE ALGORITHM (v1 preserved)
@@ -609,6 +618,27 @@ function getDashboardHTML(data = {}) {
             </div>
         </div>
 
+        <!-- File Upload -->
+        <div class="section">
+            <h2>Manual Data Upload</h2>
+            <p style="color: #666; margin-bottom: 1rem;">Upload local mineral license data files (CSV, JSON, GeoJSON, ZIP with Shapefile)</p>
+            <form method="POST" action="/api/upload-data" enctype="multipart/form-data" style="margin-bottom: 2rem;">
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <input type="file" name="datafile" accept=".csv,.json,.geojson,.zip" required style="flex: 1; padding: 0.5rem;">
+                    <select name="connector_spec" required style="padding: 0.75rem; border: 1px solid #ccc; border-radius: 5px;">
+                        <option value="">Select Connector Spec</option>
+                        ${data.connectors?.map(c => `
+                            <option value="${c.file}">${c.name}</option>
+                        `).join('') || ''}
+                    </select>
+                    <button type="submit" class="btn btn-primary">Upload & Process</button>
+                </div>
+                <p style="color: #888; font-size: 0.9rem; margin-top: 0.5rem;">
+                    Select the connector spec that matches your data format
+                </p>
+            </form>
+        </div>
+
         <!-- Connectors -->
         <div class="section">
             <h2>Data Connectors</h2>
@@ -745,6 +775,72 @@ app.post('/api/run-connector', async (req, res) => {
             message: {
                 type: 'error',
                 text: `Connector failed: ${err.message}`
+            }
+        }));
+    }
+});
+
+/**
+ * POST /api/upload-data - Upload and process local data file
+ */
+app.post('/api/upload-data', upload.single('datafile'), async (req, res) => {
+    try {
+        if (!req.file) {
+            throw new Error('No file uploaded');
+        }
+
+        const specFile = req.body.connector_spec;
+        if (!specFile) {
+            throw new Error('No connector spec selected');
+        }
+
+        const specPath = `connectors/specs/${specFile}`;
+        const uploadedFilePath = req.file.path;
+
+        console.log(`\nProcessing uploaded file: ${req.file.originalname}`);
+        console.log(`Using connector spec: ${specFile}`);
+
+        // Process the uploaded file using the connector framework
+        const result = await connectorFramework.processUploadedFile(uploadedFilePath, req.file.originalname, specPath);
+
+        // Clean up uploaded file
+        if (fs.existsSync(uploadedFilePath)) {
+            fs.unlinkSync(uploadedFilePath);
+        }
+
+        const stats = await database.getStats();
+        const connectors = connectorFramework.listConnectors();
+        const opportunities = await database.getTopOpportunities(50);
+
+        res.send(getDashboardHTML({
+            stats,
+            connectors,
+            opportunities,
+            message: {
+                type: 'success',
+                text: `File uploaded and processed! ${result.recordsInserted} records inserted`
+            }
+        }));
+
+    } catch (err) {
+        console.error('Upload error:', err);
+
+        // Clean up uploaded file on error
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+
+        const stats = await database.getStats();
+        const connectors = connectorFramework.listConnectors();
+        const opportunities = await database.getTopOpportunities(50);
+
+        res.send(getDashboardHTML({
+            stats,
+            connectors,
+            opportunities,
+            message: {
+                type: 'error',
+                text: `Upload failed: ${err.message}`
             }
         }));
     }

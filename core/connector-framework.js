@@ -465,9 +465,37 @@ class ConnectorFramework {
      */
     async parseCSVFile(csvPath) {
         console.log('Parsing CSV file...');
-        // CSV parsing implementation
-        // Would use a CSV parser library
-        throw new Error('CSV parsing not yet implemented');
+
+        const content = fs.readFileSync(csvPath, 'utf8');
+        const lines = content.split('\n').filter(line => line.trim());
+
+        if (lines.length === 0) {
+            throw new Error('CSV file is empty');
+        }
+
+        // Parse header
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        const data = [];
+
+        // Parse rows
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+            const row = {};
+
+            headers.forEach((header, index) => {
+                row[header] = values[index] || null;
+            });
+
+            // Wrap in GeoJSON-like structure if not already
+            if (!row.properties) {
+                data.push({ properties: row });
+            } else {
+                data.push(row);
+            }
+        }
+
+        console.log(`✓ Parsed ${data.length} records from CSV`);
+        return data;
     }
 
     /**
@@ -510,6 +538,102 @@ class ConnectorFramework {
                 break;
             default:
                 console.warn(`Unknown action type: ${action.type}`);
+        }
+    }
+
+    /**
+     * Process an uploaded file using a connector spec
+     */
+    async processUploadedFile(filePath, originalFilename, specPath) {
+        const spec = this.loadSpec(specPath);
+        const startTime = new Date();
+
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`PROCESSING UPLOADED FILE: ${originalFilename}`);
+        console.log(`Using spec: ${spec.metadata.name}`);
+        console.log(`${'='.repeat(60)}`);
+
+        try {
+            // Create data source and connector run
+            const sourceId = await this.database.getOrCreateSource({
+                country_code: spec.source.country_code,
+                region: spec.source.region,
+                source_name: spec.source.name,
+                source_type: spec.source.type,
+                connector_spec: specPath
+            });
+
+            const runId = await this.database.createConnectorRun(sourceId);
+
+            console.log(`Source ID: ${sourceId}, Run ID: ${runId}`);
+
+            // Determine file type and parse accordingly
+            let rawData = [];
+            const extension = originalFilename.toLowerCase().split('.').pop();
+
+            switch (extension) {
+                case 'json':
+                case 'geojson':
+                    rawData = await this.parseJSONFile(filePath);
+                    break;
+                case 'csv':
+                    rawData = await this.parseCSVFile(filePath);
+                    break;
+                case 'zip':
+                    // For ZIP files, we need to extract and find the target file
+                    const targetFile = spec.extraction.download?.target_file || null;
+                    rawData = await this.parseZipFile(filePath, targetFile);
+                    break;
+                default:
+                    throw new Error(`Unsupported file type: ${extension}`);
+            }
+
+            console.log(`✓ Parsed ${rawData.length} raw records from uploaded file`);
+
+            // Harmonize data
+            const { harmonized, errors } = this.harmonizer.harmonizeBatch(
+                rawData,
+                spec.source,
+                spec.field_mappings
+            );
+
+            console.log(`✓ Harmonized ${harmonized.length} records (${errors.length} errors)`);
+
+            // Insert into database
+            const { insertedCount, errorCount } = await this.database.bulkInsertHarmonizedClaims(
+                sourceId,
+                runId,
+                harmonized
+            );
+
+            // Update connector run status
+            await this.database.updateConnectorRun(
+                runId,
+                'success',
+                rawData.length,
+                insertedCount
+            );
+
+            const duration = ((new Date() - startTime) / 1000).toFixed(2);
+
+            console.log(`\n${'='.repeat(60)}`);
+            console.log(`FILE PROCESSING COMPLETED SUCCESSFULLY`);
+            console.log(`Duration: ${duration}s`);
+            console.log(`Records: ${rawData.length} parsed → ${insertedCount} inserted`);
+            console.log(`${'='.repeat(60)}\n`);
+
+            return {
+                success: true,
+                sourceId,
+                runId,
+                recordsFetched: rawData.length,
+                recordsInserted: insertedCount,
+                duration
+            };
+
+        } catch (err) {
+            console.error(`✗ File processing failed: ${err.message}`);
+            throw err;
         }
     }
 
