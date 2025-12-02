@@ -1,0 +1,56 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "CSE_NR": "TEST-001",
+        "BLM_PROD": "Lode",
+        "CSE_DISP": "Expired",
+        "CSE_TYPE_NR": "Gold",
+        "CSE_NAME": "Test Gold Claim 1",
+        "RCRD_ACRS": 160,
+        "Created": "2020-01-15T00:00:00Z",
+        "Modified": "2023-06-30T00:00:00Z"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-116.5, 39.5]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "CSE_NR": "TEST-002",
+        "BLM_PROD": "Placer",
+        "CSE_DISP": "Abandoned",
+        "CSE_TYPE_NR": "Silver",
+        "CSE_NAME": "Test Silver Claim 2",
+        "RCRD_ACRS": 240,
+        "Created": "2019-05-20T00:00:00Z",
+        "Modified": "2022-12-15T00:00:00Z"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-117.2, 40.1]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "CSE_NR": "TEST-003",
+        "BLM_PROD": "Lode",
+        "CSE_DISP": "Expired",
+        "CSE_TYPE_NR": "Lithium",
+        "CSE_NAME": "Test Lithium Claim 3",
+        "RCRD_ACRS": 400,
+        "Created": "2021-03-10T00:00:00Z",
+        "Modified": "2024-01-20T00:00:00Z"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-115.8, 38.9]
+      }
+    }
+  ]
+}
