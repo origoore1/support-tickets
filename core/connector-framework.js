@@ -259,9 +259,118 @@ class ConnectorFramework {
      */
     async executeAPI(spec) {
         console.log('Executing API extraction...');
-        // API extraction implementation
-        // This would depend on specific API requirements
-        throw new Error('API extraction not yet implemented');
+
+        const apiConfig = spec.extraction.api;
+        const baseUrl = apiConfig.url;
+        const maxRecords = apiConfig.max_records || 5000; // Default max 5000 records
+        const pageSize = apiConfig.page_size || 1000; // Fetch 1000 at a time
+
+        let allRecords = [];
+        let offset = 0;
+        let hasMore = true;
+
+        console.log(`Fetching from API with pagination (page size: ${pageSize}, max: ${maxRecords})`);
+
+        while (hasMore && allRecords.length < maxRecords) {
+            const url = this.buildPaginatedUrl(baseUrl, offset, pageSize);
+            console.log(`  Fetching page at offset ${offset}...`);
+
+            try {
+                const records = await this.fetchAPIPage(url);
+
+                if (records.length === 0) {
+                    hasMore = false;
+                    console.log(`  No more records found`);
+                } else {
+                    allRecords = allRecords.concat(records);
+                    console.log(`  Retrieved ${records.length} records (total: ${allRecords.length})`);
+
+                    // Check if we got less than page size, meaning we're done
+                    if (records.length < pageSize) {
+                        hasMore = false;
+                    } else {
+                        offset += pageSize;
+                    }
+                }
+            } catch (err) {
+                console.error(`  Error fetching page: ${err.message}`);
+                // If we have some records, return them; otherwise throw
+                if (allRecords.length > 0) {
+                    console.log(`  Returning ${allRecords.length} records fetched before error`);
+                    hasMore = false;
+                } else {
+                    throw err;
+                }
+            }
+        }
+
+        console.log(`✓ Total records fetched: ${allRecords.length}`);
+        return allRecords;
+    }
+
+    /**
+     * Build paginated URL for API requests
+     */
+    buildPaginatedUrl(baseUrl, offset, pageSize) {
+        const url = new URL(baseUrl);
+        url.searchParams.set('resultOffset', offset.toString());
+        url.searchParams.set('resultRecordCount', pageSize.toString());
+        return url.toString();
+    }
+
+    /**
+     * Fetch a single page from API
+     */
+    async fetchAPIPage(url) {
+        return new Promise((resolve, reject) => {
+            https.get(url, (response) => {
+                let data = '';
+
+                // Handle redirects
+                if (response.statusCode === 301 || response.statusCode === 302) {
+                    return this.fetchAPIPage(response.headers.location)
+                        .then(resolve)
+                        .catch(reject);
+                }
+
+                // Check for error status codes
+                if (response.statusCode !== 200) {
+                    reject(new Error(`API returned status code ${response.statusCode}`));
+                    return;
+                }
+
+                response.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                response.on('end', () => {
+                    try {
+                        const parsed = JSON.parse(data);
+
+                        // Handle GeoJSON FeatureCollection
+                        if (parsed.type === 'FeatureCollection' && parsed.features) {
+                            resolve(parsed.features);
+                        }
+                        // Handle plain array
+                        else if (Array.isArray(parsed)) {
+                            resolve(parsed);
+                        }
+                        // Handle ArcGIS REST API response format
+                        else if (parsed.features && Array.isArray(parsed.features)) {
+                            resolve(parsed.features);
+                        }
+                        // Handle single object
+                        else {
+                            resolve([parsed]);
+                        }
+                    } catch (err) {
+                        reject(new Error(`Failed to parse API response: ${err.message}`));
+                    }
+                });
+            }).on('error', (err) => {
+                reject(new Error(`API request failed: ${err.message}`));
+            });
+        });
     }
 
     /**

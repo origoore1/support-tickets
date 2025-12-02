@@ -18,10 +18,11 @@ source:
   update_frequency: "monthly"
 
 extraction:
-  method: "download"
-  download:
-    url: "https://gis.blm.gov/nlsdb/rest/services/HUB/BLM_Natl_MLRS_Mining_Claims_Not_Closed/FeatureServer/0/query?where=1%3D1&outFields=*&f=geojson"
-    format: "json"
+  method: "api"
+  api:
+    url: "https://gis.blm.gov/nlsdb/rest/services/HUB/BLM_Natl_MLRS_Mining_Claims/FeatureServer/0/query?where=1%3D1&outFields=*&f=geojson"
+    page_size: 1000
+    max_records: 5000
 
 # Field mappings: How to map source fields to harmonized schema
 field_mappings:
