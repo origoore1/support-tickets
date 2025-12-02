@@ -938,8 +938,8 @@ async function startup() {
         console.log(`  Opportunities: ${stats.total_opportunities}`);
         console.log(`  Active Sources: ${stats.active_sources}`);
 
-        // Start web server
-        app.listen(config.port, () => {
+        // Start web server - listen on 0.0.0.0 to allow external access
+        app.listen(config.port, '0.0.0.0', () => {
             console.log('\n' + '='.repeat(70));
             console.log(`  🚀 Lindgren-X v2.0 is running!`);
             console.log(`  📊 Dashboard: http://localhost:${config.port}`);
