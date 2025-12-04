@@ -124,8 +124,21 @@ class Harmonizer {
 
         const normalized = rawStatus.toString().toLowerCase().trim();
 
+        // Step 1: Check YAML explicit mapping first (exact match)
+        if (this.yamlStatusMap && this.yamlStatusMap[normalized]) {
+            return this.yamlStatusMap[normalized];
+        }
+
+        // Step 2: Exact match on predefined variations
         for (const [standard, variations] of Object.entries(this.statusMappings)) {
-            if (variations.some(v => normalized.includes(v))) {
+            if (variations.some(v => normalized === v)) {
+                return standard;
+            }
+        }
+
+        // Step 3: Fuzzy matching (startsWith to avoid false positives like "inactive" matching "active")
+        for (const [standard, variations] of Object.entries(this.statusMappings)) {
+            if (variations.some(v => normalized.startsWith(v))) {
                 return standard;
             }
         }
@@ -318,9 +331,20 @@ class Harmonizer {
     /**
      * Batch harmonize multiple records
      */
-    harmonizeBatch(rawDataArray, sourceConfig, fieldMappings) {
+    harmonizeBatch(rawDataArray, sourceConfig, fieldMappings, transformations = {}) {
         const harmonized = [];
         const errors = [];
+
+        // Store transformations for use in harmonization methods
+        this.currentTransformations = transformations;
+
+        // Build YAML status mapping for exact lookups
+        this.yamlStatusMap = {};
+        if (transformations.status_mapping) {
+            for (const [rawStatus, standardStatus] of Object.entries(transformations.status_mapping)) {
+                this.yamlStatusMap[rawStatus.toLowerCase()] = standardStatus;
+            }
+        }
 
         for (let i = 0; i < rawDataArray.length; i++) {
             try {
@@ -334,6 +358,10 @@ class Harmonizer {
                 });
             }
         }
+
+        // Clean up after batch
+        this.currentTransformations = null;
+        this.yamlStatusMap = {};
 
         return { harmonized, errors };
     }

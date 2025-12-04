@@ -105,11 +105,25 @@ class ConnectorFramework {
 
             console.log(`✓ Extracted ${rawData.length} raw records`);
 
+            // Debug: Log first record structure to verify field mappings
+            if (rawData.length > 0 && process.env.DEBUG === 'true') {
+                console.log('\n[DEBUG] First record structure:');
+                console.log('  Top-level keys:', Object.keys(rawData[0]));
+                if (rawData[0].properties) {
+                    console.log('  properties keys:', Object.keys(rawData[0].properties).slice(0, 20));
+                }
+                if (rawData[0].geometry) {
+                    console.log('  geometry type:', rawData[0].geometry.type);
+                }
+                console.log('');
+            }
+
             // Harmonize data
             const { harmonized, errors } = this.harmonizer.harmonizeBatch(
                 rawData,
                 spec.source,
-                spec.field_mappings
+                spec.field_mappings,
+                spec.transformations || {}
             );
 
             console.log(`✓ Harmonized ${harmonized.length} records (${errors.length} errors)`);
@@ -594,7 +608,8 @@ class ConnectorFramework {
             const { harmonized, errors } = this.harmonizer.harmonizeBatch(
                 rawData,
                 spec.source,
-                spec.field_mappings
+                spec.field_mappings,
+                spec.transformations || {}
             );
 
             console.log(`✓ Harmonized ${harmonized.length} records (${errors.length} errors)`);

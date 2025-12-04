@@ -20,9 +20,21 @@ source:
 extraction:
   method: "api"
   api:
-    url: "https://gis.blm.gov/nlsdb/rest/services/HUB/BLM_Natl_MLRS_Mining_Claims/FeatureServer/0/query?where=1%3D1&outFields=*&f=geojson"
+    # Updated to query all claims including expired/closed/abandoned
+    # Using base service without "Not_Closed" filter
+    url: "https://gis.blm.gov/arcgis/rest/services/lands/BLM_Natl_MLRS/MapServer/0/query?where=1%3D1&outFields=*&f=geojson"
     page_size: 1000
-    max_records: 5000
+    max_records: 10000
+
+  # Optional: Filter for specific statuses after retrieval
+  filters:
+    status:
+      include:
+        - "Expired"
+        - "Forfeited"
+        - "Closed"
+        - "Abandoned"
+        - "Active"  # Include active for comparison/validation
 
 # Field mappings: How to map source fields to harmonized schema
 field_mappings:
