@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-08-31T16:58:27.202Z",
+  "results": [
+    {
+      "source": "skywork",
+      "url": "https://skywork.ai/session/01a058ad-6214-71b3-8629-4b41ffdb985e?mode=1",
+      "success": false,
+      "error": "page.goto: net::ERR_CONNECTION_RESET at https://skywork.ai/session/01a058ad-6214-71b3-8629-4b41ffdb985e?mode=1\nCall log:\n\u001b[2m  - navigating to \"https://skywork.ai/session/01a058ad-6214-71b3-8629-4b41ffdb985e?mode=1\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "source": "perplexity",
+      "url": "https://www.perplexity.ai/computer/tasks/1ef0c8f7-f9dd-45ef-af34-3efad28a273c",
+      "success": false,
+      "error": "page.goto: net::ERR_CONNECTION_RESET at https://www.perplexity.ai/computer/tasks/1ef0c8f7-f9dd-45ef-af34-3efad28a273c\nCall log:\n\u001b[2m  - navigating to \"https://www.perplexity.ai/computer/tasks/1ef0c8f7-f9dd-45ef-af34-3efad28a273c\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "source": "grok",
+      "url": "https://grok.com/c/4a4a11ba-ed29-42e0-9a80-2266334de714?rid=bbeeca33-1b5c-4363-a8fa-a7f55f0dcc6d",
+      "success": false,
+      "error": "page.goto: net::ERR_CONNECTION_RESET at https://grok.com/c/4a4a11ba-ed29-42e0-9a80-2266334de714?rid=bbeeca33-1b5c-4363-a8fa-a7f55f0dcc6d\nCall log:\n\u001b[2m  - navigating to \"https://grok.com/c/4a4a11ba-ed29-42e0-9a80-2266334de714?rid=bbeeca33-1b5c-4363-a8fa-a7f55f0dcc6d\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "source": "gemini",
+      "url": "https://gemini.google.com/app/9ebe69beb65d61fa",
+      "success": false,
+      "error": "page.goto: net::ERR_CONNECTION_RESET at https://gemini.google.com/app/9ebe69beb65d61fa\nCall log:\n\u001b[2m  - navigating to \"https://gemini.google.com/app/9ebe69beb65d61fa\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "source": "chatgpt",
+      "url": "https://chatgpt.com/c/6a95ad9e-b264-83eb-9730-4bfe245de5aa",
+      "success": false,
+      "error": "page.goto: net::ERR_CONNECTION_RESET at https://chatgpt.com/c/6a95ad9e-b264-83eb-9730-4bfe245de5aa\nCall log:\n\u001b[2m  - navigating to \"https://chatgpt.com/c/6a95ad9e-b264-83eb-9730-4bfe245de5aa\", waiting until \"networkidle\"\u001b[22m\n"
+    }
+  ],
+  "successful": 0,
+  "failed": 5
+}
